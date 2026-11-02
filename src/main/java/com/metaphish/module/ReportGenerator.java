@@ -125,9 +125,9 @@ public final class ReportGenerator {
                 Html.append("<tr>");
                 Html.append("<td>").append(DevIdx++).append("</td>");
                 Html.append("<td>").append(Escape(Device.getOrDefault("IpAddress", ""))).append("</td>");
-                Html.append("<td>").append(Escape(Device.getOrDefault("IpCountry", ""))).append("</td>");
+                Html.append("<td>").append(Escape(Device.getOrDefault("Country", ""))).append("</td>");
                 Html.append("<td>").append(Escape(Device.getOrDefault("DeviceBrand", ""))).append(" ").append(Escape(Device.getOrDefault("DeviceModel", ""))).append("</td>");
-                Html.append("<td>").append(Escape(Device.getOrDefault("Browser", ""))).append(" ").append(Escape(Device.getOrDefault("BrowserVersion", ""))).append("</td>");
+                Html.append("<td>").append(Escape(Device.getOrDefault("BrowserName", ""))).append(" ").append(Escape(Device.getOrDefault("BrowserVersion", ""))).append("</td>");
                 if (HasGps) {
                     Html.append("<td><a class=\"gps-link\" href=\"https://maps.google.com/?q=").append(Lat).append(",").append(Lon).append("\" target=\"_blank\">")
                         .append(Lat).append(", ").append(Lon).append("</a></td>");

