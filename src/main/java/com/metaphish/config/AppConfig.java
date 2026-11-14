@@ -25,6 +25,7 @@ public final class AppConfig {
     public String CameraMode;
     public String VideoSource;
     public int    VideoDuration;
+    public String RedirectUrl;
 
     public AppConfig(String ConfigFilePath) {
         Properties Props = new Properties();
@@ -56,6 +57,7 @@ public final class AppConfig {
         CameraMode            = Props.getProperty("camera.mode", "front");
         VideoSource           = Props.getProperty("video.source", "front");
         VideoDuration         = Integer.parseInt(Props.getProperty("video.duration", "10"));
+        RedirectUrl           = Props.getProperty("redirect.url", "");
     }
 
     public void Override(String Key, String Value) {
@@ -70,6 +72,7 @@ public final class AppConfig {
             case "camera-mode"    -> CameraMode       = Value;
             case "video-source"   -> VideoSource      = Value;
             case "video-duration" -> VideoDuration    = Integer.parseInt(Value);
+            case "redirect-url"   -> RedirectUrl      = Value;
         }
     }
 }

